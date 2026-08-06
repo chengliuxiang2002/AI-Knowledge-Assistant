@@ -1,0 +1,12 @@
+# Production overrides
+spring:
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY}
+  logging:
+    level:
+      org.springframework.ai: INFO
+      com.aiassistant: INFO
+
+server:
+  port: ${PORT:8123}

@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    container_name: ai-assistant-backend
+    ports:
+      - "8123:8123"
+    environment:
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - SEARCH_API_KEY=${SEARCH_API_KEY:-}
+    restart: unless-stopped
+
+  frontend:
+    build: ./ai-assistant-frontend
+    container_name: ai-assistant-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
