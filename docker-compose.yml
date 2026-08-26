@@ -1,5 +1,23 @@
 version: '3.8'
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai-assistant-postgres
+    environment:
+      - POSTGRES_DB=assistant
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d assistant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build: .
     container_name: ai-assistant-backend
@@ -8,6 +26,12 @@ services:
     environment:
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
       - SEARCH_API_KEY=${SEARCH_API_KEY:-}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/assistant
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -18,3 +42,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  pgdata:

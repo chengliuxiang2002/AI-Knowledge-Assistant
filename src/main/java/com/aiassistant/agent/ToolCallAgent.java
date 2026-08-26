@@ -12,8 +12,6 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.model.tool.ToolCallingManager;
-import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.ToolCallback;
 
 import java.util.ArrayList;
@@ -108,24 +106,41 @@ public class ToolCallAgent extends ReActAgent {
         AssistantMessage assistantMessage = lastChatResponse.getResult().getOutput();
         List<AssistantMessage.ToolCall> toolCalls = assistantMessage.getToolCalls();
 
-        // Execute tools via Spring AI's ToolCallingManager
-        ToolExecutionResult executionResult = ToolCallingManager.builder().build()
-                .executeAndReturn(lastChatResponse, availableTools, List.of());
-
-        // Build tool response messages
-        List<ToolResponseMessage.ToolResponse> toolResponses = executionResult.responses().stream()
-                .map(r -> new ToolResponseMessage.ToolResponse(r.id(), r.name(), r.responseData()))
-                .collect(Collectors.toList());
+        // Execute each requested tool by matching its name to the available callbacks
+        List<ToolResponseMessage.ToolResponse> toolResponses = new ArrayList<>();
+        for (AssistantMessage.ToolCall toolCall : toolCalls) {
+            ToolCallback callback = findToolCallback(toolCall.name());
+            String result;
+            if (callback == null) {
+                result = "No tool found with name: " + toolCall.name();
+            } else {
+                try {
+                    result = callback.call(toolCall.arguments());
+                } catch (Exception e) {
+                    result = "Error executing tool " + toolCall.name() + ": " + e.getMessage();
+                }
+            }
+            toolResponses.add(new ToolResponseMessage.ToolResponse(toolCall.id(), toolCall.name(), result));
+        }
 
         // Record assistant message + tool responses in conversation context
         messageList.add(assistantMessage);
         messageList.add(new ToolResponseMessage(toolResponses, null));
 
-        String summary = executionResult.responses().stream()
+        String summary = toolResponses.stream()
                 .map(r -> r.name() + ": " + truncate(r.responseData(), 200))
                 .collect(Collectors.joining(" | "));
         log.info("{}: action complete — {}", getName(), summary);
         return summary;
+    }
+
+    private ToolCallback findToolCallback(String name) {
+        for (ToolCallback tool : availableTools) {
+            if (tool.getToolDefinition().name().equals(name)) {
+                return tool;
+            }
+        }
+        return null;
     }
 
     private static String truncate(String s, int maxLen) {

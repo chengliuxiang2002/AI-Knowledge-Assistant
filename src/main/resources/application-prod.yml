@@ -3,10 +3,15 @@ spring:
   ai:
     dashscope:
       api-key: ${DASHSCOPE_API_KEY}
-  logging:
-    level:
-      org.springframework.ai: INFO
-      com.aiassistant: INFO
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/assistant}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
 server:
   port: ${PORT:8123}
+
+logging:
+  level:
+    org.springframework.ai: INFO
+    com.aiassistant: INFO

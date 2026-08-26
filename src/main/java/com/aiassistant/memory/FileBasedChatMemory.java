@@ -14,12 +14,13 @@ import java.util.List;
 public class FileBasedChatMemory implements ChatMemory {
 
     private final String baseDir;
-    private static final Kryo kryo = new Kryo();
 
-    static {
+    private static final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial(() -> {
+        Kryo kryo = new Kryo();
         kryo.setRegistrationRequired(false);
         kryo.setInstantiatorStrategy(new StdInstantiatorStrategy());
-    }
+        return kryo;
+    });
 
     public FileBasedChatMemory(String dir) {
         this.baseDir = dir;
@@ -56,7 +57,7 @@ public class FileBasedChatMemory implements ChatMemory {
             return new ArrayList<>();
         }
         try (Input input = new Input(new FileInputStream(file))) {
-            return (List<Message>) kryo.readClassAndObject(input);
+            return (List<Message>) kryoThreadLocal.get().readClassAndObject(input);
         } catch (Exception e) {
             return new ArrayList<>();
         }
@@ -65,7 +66,7 @@ public class FileBasedChatMemory implements ChatMemory {
     private void saveConversation(String conversationId, List<Message> messages) {
         File file = getConversationFile(conversationId);
         try (Output output = new Output(new FileOutputStream(file))) {
-            kryo.writeClassAndObject(output, messages);
+            kryoThreadLocal.get().writeClassAndObject(output, messages);
         } catch (Exception e) {
             throw new RuntimeException("Failed to save conversation", e);
         }

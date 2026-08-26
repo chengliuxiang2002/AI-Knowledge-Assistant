@@ -1,7 +1,9 @@
 package com.aiassistant.service;
 
 import com.aiassistant.advisor.LoggingAdvisor;
+import com.aiassistant.advisor.ReReadingAdvisor;
 import com.aiassistant.agent.ToolCallAgent;
+import com.aiassistant.memory.FileBasedChatMemory;
 import com.aiassistant.rag.QueryRewriter;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import jakarta.annotation.Resource;
@@ -10,7 +12,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -45,14 +46,15 @@ public class KnowledgeAssistantService {
 
     public KnowledgeAssistantService(ChatModel dashscopeChatModel) {
         MessageWindowChatMemory chatMemory = MessageWindowChatMemory.builder()
-                .chatMemoryRepository(new InMemoryChatMemoryRepository())
+                .chatMemoryRepository(new FileBasedChatMemory("./data/chat-memory"))
                 .maxMessages(20)
                 .build();
         chatClient = ChatClient.builder(dashscopeChatModel)
                 .defaultSystem(SYSTEM_PROMPT)
                 .defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
-                        new LoggingAdvisor()
+                        new LoggingAdvisor(),
+                        new ReReadingAdvisor()
                 )
                 .build();
     }

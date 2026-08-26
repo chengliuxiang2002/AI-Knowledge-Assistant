@@ -12,7 +12,10 @@ spring:
     ollama:
       base-url: http://localhost:11434
       chat:
+        enabled: false
         model: gemma3:1b
+      embedding:
+        enabled: false
 
 server:
   port: 8123

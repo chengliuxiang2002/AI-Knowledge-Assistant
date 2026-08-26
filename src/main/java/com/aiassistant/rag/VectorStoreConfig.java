@@ -7,10 +7,12 @@ import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.util.List;
 
 @Configuration
+@Profile("!prod")
 public class VectorStoreConfig {
 
     @Resource
@@ -26,7 +28,8 @@ public class VectorStoreConfig {
     VectorStore knowledgeVectorStore(EmbeddingModel dashscopeEmbeddingModel) {
         SimpleVectorStore simpleVectorStore = SimpleVectorStore.builder(dashscopeEmbeddingModel).build();
         List<Document> documentList = documentLoader.loadMarkdowns();
-        List<Document> enrichedDocuments = keywordEnricher.enrichDocuments(documentList);
+        List<Document> splitDocuments = tokenTextSplitterConfig.splitCustomized(documentList);
+        List<Document> enrichedDocuments = keywordEnricher.enrichDocuments(splitDocuments);
         simpleVectorStore.add(enrichedDocuments);
         return simpleVectorStore;
     }
