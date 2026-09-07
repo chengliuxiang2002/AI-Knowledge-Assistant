@@ -2,6 +2,7 @@ package com.aiassistant.service;
 
 import com.aiassistant.advisor.LoggingAdvisor;
 import com.aiassistant.advisor.ReReadingAdvisor;
+import com.aiassistant.advisor.RetrievalAssertAdvisor;
 import com.aiassistant.agent.ToolCallAgent;
 import com.aiassistant.memory.FileBasedChatMemory;
 import com.aiassistant.rag.QueryRewriter;
@@ -10,13 +11,11 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -29,7 +28,7 @@ public class KnowledgeAssistantService {
     private final ChatClient chatClient;
 
     @Resource
-    private VectorStore knowledgeVectorStore;
+    private RetrievalAssertAdvisor retrievalAssertAdvisor;
 
     @Resource
     private QueryRewriter queryRewriter;
@@ -93,7 +92,7 @@ public class KnowledgeAssistantService {
                 .prompt()
                 .user(rewrittenMessage)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
-                .advisors(new QuestionAnswerAdvisor(knowledgeVectorStore))
+                .advisors(retrievalAssertAdvisor)
                 .call()
                 .chatResponse();
         return chatResponse.getResult().getOutput().getText();
@@ -108,7 +107,7 @@ public class KnowledgeAssistantService {
                 .prompt()
                 .user(rewrittenMessage)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
-                .advisors(new QuestionAnswerAdvisor(knowledgeVectorStore))
+                .advisors(retrievalAssertAdvisor)
                 .stream()
                 .content();
     }
